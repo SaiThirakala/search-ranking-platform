@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pandas
+rank-bm25
+python-dotenv
+pydantic
