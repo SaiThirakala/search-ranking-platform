@@ -30,7 +30,7 @@ def load_processed_docs() -> List[Dict[str, Any]]:
             line = line.strip()
             if not line:
                 continue
-            documents.append(json.laods(line))
+            documents.append(json.loads(line))
 
     return documents
 
@@ -87,4 +87,30 @@ def save_metadata(metadata: List[Dict[str, Any]]) -> None:
     with open(EMBEDDINGS_PATH, "w", encoding="uts-8") as file:
         for record in metadata:
             file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+def generate_embeddings(texts: List[str]) -> np.ndarray:
+    """
+    Generate dense embeddings for the provided texts using a sentence-transformer.
+
+    Returns a NumPy array with shape (number_of_texts, embedding_dimension)
+    """
+    pass
+
+def save_embeddings(embeddings: np.ndarray) -> None:
+    """
+    Save the emdedding matrix to disk as a Numpy .npy file
+    """
+    np.save(EMBEDDINGS_PATH, embeddings)
+
+def build_embedding_artifacts() -> Dict[str, Any]:
+    """
+    End-to-end pipeline for embedding generations.
     
+    First load processed documents from preprocessing stage. Then extract
+    searchable text and aligned metadata. Generate dense embeddings. Save 
+    embeddings and metadata to disk.
+    
+    Returns summary imformation for logging + debugging.
+    """
+    pass
+
