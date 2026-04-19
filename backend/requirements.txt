@@ -4,3 +4,10 @@ pandas
 rank-bm25
 python-dotenv
 pydantic
+
+numpy
+sentence-transformers
+faiss-cpu
+torch
+scikit-learn
+
