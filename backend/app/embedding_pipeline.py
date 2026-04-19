@@ -84,7 +84,7 @@ def save_metadata(metadata: List[Dict[str, Any]]) -> None:
     
     Each line corresponds to one embedding row in the .npy file.
     """
-    with open(EMBEDDINGS_PATH, "w", encoding="uts-8") as file:
+    with open(EMBEDDING_METADATA_PATH, "w", encoding="utf-8") as file:
         for record in metadata:
             file.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -94,7 +94,20 @@ def generate_embeddings(texts: List[str]) -> np.ndarray:
 
     Returns a NumPy array with shape (number_of_texts, embedding_dimension)
     """
-    pass
+    if not texts:
+        raise ValueError("No texts available for embedding")
+    
+    model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+
+    embeddings = model.encode(
+        texts,
+        batch_size=EMBEDDING_BATCH_SIZE,
+        show_progress_bar=True,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+    )
+
+    return embeddings.astype(np.float32)
 
 def save_embeddings(embeddings: np.ndarray) -> None:
     """
@@ -112,5 +125,21 @@ def build_embedding_artifacts() -> Dict[str, Any]:
     
     Returns summary imformation for logging + debugging.
     """
-    pass
+    ensure_output_dir_exists()
+
+    documents = load_processed_docs()
+    texts, metadata = extract_texts_and_metadata(documents)
+
+    embeddings = generate_embeddings(texts)
+
+    save_embeddings(embeddings)
+    save_metadata(metadata)
+
+    return {
+        "document_count": len(metadata),
+        "embedding_shape": tuple(embeddings.shape),
+        "embeddings_path": EMBEDDINGS_PATH,
+        "metadata_path": EMBEDDING_METADATA_PATH,
+        "model_name": EMBEDDING_MODEL_NAME,
+    }
 
