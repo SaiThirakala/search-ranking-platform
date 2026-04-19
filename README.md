@@ -1,5 +1,5 @@
 # Intelligent Search + Ranking Platform  
-### Part 1 — BM25 Research Paper Search Engine
+### Part 1: BM25 Research Paper Search Engine
 
 An end-to-end search platform built on a real-world research paper corpus.  
 This Part 1 implements a **containerized FastAPI backend** and **React frontend** that allow users to search research papers using **BM25 keyword ranking** over titles and abstracts.
@@ -29,3 +29,25 @@ The system returns ranked papers containing :
 - Abstract
 - BM25 score
 
+---
+
+# Teck Stack
+
+## Backend
+- Python 3.11
+- FastAPI
+- Uvicorn
+- Pandas
+- rank_bm25
+- Pydantic
+
+## Frontend
+- React
+- Vite
+- CSS
+
+## Infrastructure
+- Docker
+
+## Dataset
+- DBLP v10 research paper metadata dataset (https://www.kaggle.com/datasets/nechbamohammed/research-papers-dataset/data)
