@@ -35,7 +35,24 @@ class SemanticSearchEngine:
         
         Expected shapre: (number_of_documents, embedding_dimension)
         """
-        pass
+        if not os.path.exists(EMBEDDINGS_PATH):
+            raise FileNotFoundError(
+                f"Embeddings files not found at {EMBEDDINGS_PATH}"
+            )
+        
+        embeddings = np.load(EMBEDDINGS_PATH)
+
+        if embeddings.ndim != 2:
+            raise ValueError(
+                f"Expected 2D embedding matrix, got shape {embeddings.shape}"
+            )
+        
+        if embeddings.dtype != np.float32:
+            embeddings = embeddings.astype(np.float32)
+
+        self.embeddings = embeddings
+        self.embeddings_dim = embeddings.shape[1]
+        return embeddings
 
     def load_metadata(self) -> List[Dict[str, Any]]:
         """
@@ -43,7 +60,22 @@ class SemanticSearchEngine:
         
         Each line corresponds to one row in the embeddings matrix.
         """
-        pass
+        if not os.path.exists(EMBEDDING_METADATA_PATH):
+            raise FileNotFoundError(
+                f"Metadata file not found at {EMBEDDING_METADATA_PATH}"
+            )
+        
+        metadata: List[Dict[str, Any]] = []
+
+        with open(EMBEDDING_METADATA_PATH, "r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if not line:
+                    continue
+                metadata.append(json.loads(line))
+        
+        self.metadata = metadata
+        return metadata
 
     def validate_alignment(self) -> None:
         """
@@ -52,7 +84,18 @@ class SemanticSearchEngine:
         The number of embedding rows must match the number of
         metadata rows.
         """
-        pass
+        if self.embeddings is None:
+            raise ValueError("EMbeddings must be loaded before alignment validation.")
+        
+        if not self.metadata:
+            raise ValueError("Metadata must be loaded before alignment validation.")
+        
+        if self.embeddings.shape[0] != len(self.metadata):
+            raise ValueError(
+                "Embeddings/metadata alignment mismatch: "
+                f"{self.embeddings.shpae[0]} embedding rows vs"
+                f"{len(self.metadata)} metadata records."
+            )
 
     def load_model(self) -> SentenceTransformer:
         """
@@ -61,7 +104,8 @@ class SemanticSearchEngine:
         It is important to use the same model for both document embeddings 
         and query embeddings.
         """
-        pass
+        self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        return self.model
 
     def build_index(self) -> faiss.Index:
         """
@@ -70,7 +114,17 @@ class SemanticSearchEngine:
         Inner product similarity can be used to approximate cosine similarity
         because embeddings were normalizes during generation.
         """
-        pass
+        if self.embeddings is None:
+            raise ValueError("Embeddings must be loaded before building index.")
+        
+        if self.embeddings_dim is None:
+            raise ValueError("Embedding dimenstion is unknown.")
+        
+        index = faiss.IndexFlatIP(self.embeddings_dim)
+        index.add(self.embeddings)
+
+        self.index = index
+        return index
 
     def initialize(self) -> int:
         """
@@ -84,7 +138,11 @@ class SemanticSearchEngine:
         
         Returns number of indexed documents.
         """
-        pass
+        self.load_embeddings()
+        self.load_metadata()
+        self.validate_alignment()
+        self.load_model()
+        self.build_index()
 
     def encode_query(self, query: str) -> np.ndarray:
         """
@@ -92,7 +150,20 @@ class SemanticSearchEngine:
         
         Returns shape (1, embedding_dimension)
         """
-        pass
+        if self.model is None:
+            raise RuntimeError("Semantic model is not initialized.")
+        
+        query = query.strip()
+        if not query:
+            raise ValueError("Query cannot be empty.")
+        
+        query_embedding = self.model.encode(
+            [query],
+            convert_to_numpt=True,
+            normalize_embeddings=True,
+        ).astype(np.float32)
+
+        return query_embedding
 
     def search(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
         """
@@ -100,5 +171,21 @@ class SemanticSearchEngine:
         
         Returns the top_k nearest documents with similarity scores.
         """
-        pass
-    
+        if self.index is None:
+            raise RuntimeError("FAISS index is not initialized.")
+        
+        query_embedding = self.encode_query(query)
+
+        scores, indices = self.index.search(query_embedding, top_k)
+
+        results: List[Dict[str, Any]] = []
+
+        for score, index in zip(scores[0], indices[0]):
+            if index < 0:
+                continue
+
+            doc = self.metadata[index].copy()
+            doc["score"] = float(score)
+            results.append(doc)
+        
+        return results
