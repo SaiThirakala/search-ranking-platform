@@ -29,7 +29,7 @@ class SemanticSearchEngine:
         self.model: SentenceTransformer | None = None
         self.embeddings_dim: int | None = None
     
-    def load_embeddings(self) -> np.nparray:
+    def load_embeddings(self) -> np.ndarray:
         """
         Load the saved embedding matrix from /data/processed.
         
@@ -159,7 +159,7 @@ class SemanticSearchEngine:
         
         query_embedding = self.model.encode(
             [query],
-            convert_to_numpt=True,
+            convert_to_numpy=True,
             normalize_embeddings=True,
         ).astype(np.float32)
 
