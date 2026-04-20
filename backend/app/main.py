@@ -3,11 +3,13 @@ import os
 from app.config import DEFAULT_TOP_K, MAX_TOP_K, PROCESSED_DATA_PATH
 from app.preprocess import preprocess_csv
 from app.search_engine import SearchEngine
+from app.semantic_search_engine import SemanticSearchEngine
 from app.schemas import HealthResponse, SearchResponse, SearchResult
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 
 search_engine = SearchEngine()
+semantic_search_engine = SemanticSearchEngine()
 
 def processed_file_has_content(path: str) -> bool:
     """
@@ -30,8 +32,11 @@ async def lifespan(app: FastAPI):
     else:
         print("Processed file found, skipping preprocessing.")
 
-    indexed_count = search_engine.initialize()
-    print(f"BM25 index ready with {indexed_count} documents.")
+    bm25_count = search_engine.initialize()
+    print(f"BM25 index ready with {bm25_count} documents.")
+
+    semantic_count = semantic_search_engine.initialize()
+    print(f"Semantic index ready with {semantic_count} documents.")
 
     yield
 
@@ -45,7 +50,8 @@ app = FastAPI(
 def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
-        indexed_documents=len(search_engine.documents)
+        bm25_indexed_documents=len(search_engine.documents),
+        semantic_indexed_documents=len(semantic_search_engine.metadata),
     )
 
 @app.get("/search", response_model=SearchResponse)
@@ -62,5 +68,30 @@ def search(
     return SearchResponse(
         query=query,
         count=len(results),
+        retrieval_mode="bm25",
+        results=[SearchResult(**result) for result in results]
+    )
+
+@app.get("/search/semantic", response_model=SearchResponse)
+def semantic_search(
+    q: str = Query(..., min_length=1, description="semantic search query"),
+    top_k: int = Query(DEFAULT_TOP_K, ge=1, le=MAX_TOP_K),
+) -> SearchResponse:
+    query = q.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+    
+    try:
+        results = semantic_search_engine.search(query=query, top_k=top_k)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Semantic seach failed: {str(exc)}"
+        ) from exc
+    
+    return SearchResponse(
+        query=query,
+        count=len(results),
+        retrieval_mode="semantic",
         results=[SearchResult(**result) for result in results]
     )

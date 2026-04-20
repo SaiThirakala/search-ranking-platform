@@ -9,13 +9,15 @@ class SearchResult(BaseModel):
     year: Optional[int] = None
     n_citation: Optional[int] = None
     abstract: str
-    score: float = Field(..., description="BM25 score")
+    score: float = Field(..., description="Retrieval score")
 
 class SearchResponse(BaseModel):
     query: str
     count: int
+    retrieval_mode: str
     results: List[SearchResult]
 
 class HealthResponse(BaseModel):
     status: str
-    indexed_documents: int
+    bm25_indexed_documents: int
+    semantic_indexed_documents: int
